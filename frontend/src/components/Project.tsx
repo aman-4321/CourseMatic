@@ -1,9 +1,10 @@
-import React from 'react'
+import React from "react";
+import Editor from "./Editor";
 
 export default function Project() {
   return (
     <div>
-      Project Page
+      <Editor />
     </div>
-  )
+  );
 }
