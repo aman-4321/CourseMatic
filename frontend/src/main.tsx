@@ -20,10 +20,6 @@ const router = createBrowserRouter([
     path: "/projectID",
     element: <Project />,
   },
-  {
-    path: "/editor",
-    element: <Editor />,
-  },
 ]);
 
 createRoot(document.getElementById("root")!).render(
