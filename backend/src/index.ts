@@ -5,6 +5,7 @@ import { CloudinaryStorage } from "multer-storage-cloudinary";
 import ffmpeg from "fluent-ffmpeg";
 import cors from "cors";
 import dotenv from "dotenv";
+import { AssemblyAI } from "assemblyai";
 
 dotenv.config();
 
@@ -30,6 +31,10 @@ const storage = new CloudinaryStorage({
 
 const upload = multer({ storage: storage });
 
+const assemblyClient = new AssemblyAI({
+  apiKey: process.env.ASSEMBLYAI_API_KEY ?? "",
+});
+
 app.post("/upload", upload.single("video"), async (req, res) => {
   try {
     if (!req.file) {
@@ -54,11 +59,20 @@ app.post("/upload", upload.single("video"), async (req, res) => {
       public_id: `audio/${outputFileName}`,
     });
 
-    console.log(audioUploadResult);
+    console.log("Audio uploaded to Cloudinary:", audioUploadResult.secure_url);
+
+    const config = {
+      audio_url: audioUploadResult.secure_url,
+    };
+
+    const transcript = await assemblyClient.transcripts.transcribe(config);
+
+    console.log("Transcript:", transcript.text);
 
     res.json({
-      message: "Video converted to audio successfully",
+      message: "Video converted to audio and transcribed successfully",
       audioUrl: audioUploadResult.secure_url,
+      transcript: transcript.text,
     });
   } catch (error) {
     console.error("Error:", error);

@@ -4,12 +4,14 @@ import axios from "axios";
 const VideoToAudioConverter = () => {
   const [videoFile, setVideoFile] = useState(null);
   const [audioUrl, setAudioUrl] = useState("");
+  const [transcript, setTranscript] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleFileChange = (e) => {
     setVideoFile(e.target.files[0]);
     setAudioUrl("");
+    setTranscript("");
     setError("");
   };
 
@@ -36,6 +38,7 @@ const VideoToAudioConverter = () => {
       );
 
       setAudioUrl(response.data.audioUrl);
+      setTranscript(response.data.transcript);
     } catch (e) {
       setError("Failed to convert the video. Please try again.");
     } finally {
@@ -83,6 +86,20 @@ const VideoToAudioConverter = () => {
             >
               Download Audio
             </a>
+
+            <button
+              onClick={() => alert(transcript)}
+              className="mt-4 w-full bg-green-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+            >
+              Get Transcript
+            </button>
+
+            {transcript && (
+              <div className="mt-4 bg-gray-50 p-4 rounded-lg shadow-inner">
+                <h2 className="text-lg font-semibold mb-2">Transcript:</h2>
+                <p className="text-sm text-gray-700">{transcript}</p>
+              </div>
+            )}
           </div>
         )}
       </div>
