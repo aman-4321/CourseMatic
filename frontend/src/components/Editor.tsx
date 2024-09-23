@@ -17,7 +17,7 @@ const Editor = () => {
   let totalDur = 0
 
   useEffect(() => {
-    loadDuration()
+    loadDuration(videoSrc)
   }, [videoSrc])
 
   const load = async () => {
@@ -44,7 +44,6 @@ const Editor = () => {
     if (file) {
       const fileURL = URL.createObjectURL(file);
       if (videoSrc && videoSrc.length > 0) {
-        console.log("here")
         setVideoSrc((prev: any) => [...prev, fileURL]);
         return
       }
@@ -61,9 +60,10 @@ const Editor = () => {
   };
 
   // loads duration of all the video from the videoSrc array
-  const loadDuration = async () => {
-    if (videoSrc) {
-      await Promise.all(videoSrc.map(async (x: any) => {
+  const loadDuration = async (video: any) => {
+    if (video) {
+      const dummydur: any = []
+      await Promise.all(video.map(async (x: any, index: number) => {
         const a = new Promise(async (resolve, reject) => {
           const video = document.createElement('video');
           video.preload = 'metadata';
@@ -76,19 +76,9 @@ const Editor = () => {
           };
         })
         a.then((duration: any) => {
-          if (durMap && durMap[durMap.length - 1] != duration) {
-            setDurMap((prev: any) => {
-              if (prev.includes(duration)) {
-                return prev;
-              }
-
-              // Otherwise, append the new duration to the previous durations
-              return [...prev, duration];
-            })
-            return
-          }
-          if (durMap?.length == 0 || durMap == null) {
-            setDurMap([duration])
+          if (dummydur.length == 0 || !dummydur.includes(duration)) {
+            dummydur[index] = duration
+            setDurMap([...dummydur])
           }
         })
       }))
@@ -119,18 +109,20 @@ const Editor = () => {
   const getTotalDur = () => {
     for (let index = 0; index < count; index++) {
       if (durMap) {
-        console.log(durMap[index])
+        // gets the width of each videos
         totalDur += (Math.floor(durMap[index]) * 5) + Math.floor(durMap[index])
       }
     }
     let currentTime = 0
+
+    // get the left margin value for the current video from the video's start
     if (playerRef.current) {
-      currentTime = (Math.round(playerRef.current.getCurrentTime()) > 0 ? Math.round(playerRef.current.getCurrentTime())-1 : 0) * 6
+      currentTime = (Math.round(playerRef.current.getCurrentTime()) > 0 ? Math.round(playerRef.current.getCurrentTime()) - 1 : 0) * 6
     }
-    const firstVid = 20*count
-    console.log(totalDur, firstVid, currentTime, count, (count>0 ? 4 : 12))
-    return 12+totalDur + firstVid + currentTime
-    
+
+    // gets the left margin value for all the videos before the current video
+    const firstVid = 20 * count
+    return 12 + totalDur + firstVid + currentTime
   }
 
   const handleFullscreen = () => {
@@ -143,6 +135,25 @@ const Editor = () => {
     setCount(vidIndex)
     playerRef.current?.seekTo(time + 1)
     setPlaying(false);
+  }
+
+  const trim = async () => {
+    if (!ffmpegRef.current.loaded) {
+      await load()
+    }
+    if (playerRef.current && ffmpegRef.current.loaded) {
+      await ffmpegRef.current.writeFile('input.mp4', await fetchFile(videoSrc[count]))
+      await ffmpegRef.current.exec(['-i', `input.mp4`, `-ss`, '00:00:00', '-to', `${formatTime(playerRef.current.getCurrentTime())}`, `-c`, `copy`, `output.mp4`])
+      const output: any = await ffmpegRef.current.readFile('output.mp4')
+      const blobOut = new Blob([output.buffer], { type: 'video/mp4' })
+      const outputURL = URL.createObjectURL(blobOut)
+      const videos = [...videoSrc]
+      videos[count] = outputURL
+      setVideoSrc(videos)
+      loadDuration(videos)
+      ffmpegRef.current.deleteFile('input.mp4')
+      ffmpegRef.current.deleteFile('output.mp4')
+    }
   }
 
   return (
@@ -188,7 +199,7 @@ const Editor = () => {
         {/* the timeline bars */}
         {durMap && durMap.map((duration: number, vidIndex: number) => {
           return (
-            <div className="flex items-center px-2 bg-slate-300 rounded-md py-1 mr-1">
+            <div className="flex items-center px-2 bg-slate-300 rounded-sm py-1 mr-1">
               {Array.from({ length: duration }).map((_, index) => {
                 const barHeight = (index % 5 == 0 ? 10 : 7)
                 return (
@@ -213,7 +224,7 @@ const Editor = () => {
           Normal Speed
         </button>
         <button onClick={handleFullscreen}>Fullscreen</button>
-        <button onClick={() => console.log("trim")}>Trim</button>
+        <button onClick={trim}>Trim</button>
         <input
           type="range"
           min="0"
