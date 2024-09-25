@@ -136,23 +136,50 @@ const Editor = () => {
     playerRef.current?.seekTo(time + 1)
     setPlaying(false);
   }
+  
+  // split the video into two
+  const split = async() => {
+    if (!ffmpegRef.current.loaded) {
+      await load()
+    }
+    if (playerRef.current && ffmpegRef.current.loaded && durMap) {
+      await ffmpegRef.current.writeFile('splitIn.mp4', await fetchFile(videoSrc[count]))
+      await ffmpegRef.current.exec(['-i', `splitIn.mp4`, `-ss`, '00:00:00', '-to', `${formatTime(playerRef.current.getCurrentTime())}`, `-c`, `copy`, `splitOut1.mp4`])
+      await ffmpegRef.current.exec(['-i', `splitIn.mp4`, `-ss`, `${formatTime(playerRef.current.getCurrentTime())}`, '-to', `${formatTime(durMap[count]+1)}`, `-c`, `copy`, `splitOut2.mp4`])
+      const output1: any = await ffmpegRef.current.readFile('splitOut1.mp4')
+      const output2: any = await ffmpegRef.current.readFile('splitOut2.mp4')
+      const blobOut1 = new Blob([output1.buffer], {type: 'video/mp4'})
+      const blobOut2 = new Blob([output2.buffer], {type: 'video/mp4'})
+      const outputUrl1 = URL.createObjectURL(blobOut1)
+      const outputUrl2 = URL.createObjectURL(blobOut2)
+      const videos = [...videoSrc]
+      delete videos[count]
+      videos.splice(count, 0, outputUrl1, outputUrl2)
+      setVideoSrc(videos)
+      loadDuration(videos)
+      ffmpegRef.current.deleteFile('splitIn.mp4')
+      ffmpegRef.current.deleteFile('splitOut1.mp4')
+      ffmpegRef.current.deleteFile('splitOut2.mp4')
+    }
+  }
 
+  // trim the video
   const trim = async () => {
     if (!ffmpegRef.current.loaded) {
       await load()
     }
     if (playerRef.current && ffmpegRef.current.loaded) {
-      await ffmpegRef.current.writeFile('input.mp4', await fetchFile(videoSrc[count]))
-      await ffmpegRef.current.exec(['-i', `input.mp4`, `-ss`, '00:00:00', '-to', `${formatTime(playerRef.current.getCurrentTime())}`, `-c`, `copy`, `output.mp4`])
-      const output: any = await ffmpegRef.current.readFile('output.mp4')
+      await ffmpegRef.current.writeFile('trimIn.mp4', await fetchFile(videoSrc[count]))
+      await ffmpegRef.current.exec(['-i', `trimIn.mp4`, `-ss`, '00:00:00', '-to', `${formatTime(playerRef.current.getCurrentTime())}`, `-c`, `copy`, `trimOut.mp4`])
+      const output: any = await ffmpegRef.current.readFile('trimOut.mp4')
       const blobOut = new Blob([output.buffer], { type: 'video/mp4' })
       const outputURL = URL.createObjectURL(blobOut)
       const videos = [...videoSrc]
       videos[count] = outputURL
       setVideoSrc(videos)
       loadDuration(videos)
-      ffmpegRef.current.deleteFile('input.mp4')
-      ffmpegRef.current.deleteFile('output.mp4')
+      ffmpegRef.current.deleteFile('trimIn.mp4')
+      ffmpegRef.current.deleteFile('trimOut.mp4')
     }
   }
 
@@ -225,6 +252,7 @@ const Editor = () => {
         </button>
         <button onClick={handleFullscreen}>Fullscreen</button>
         <button onClick={trim}>Trim</button>
+        <button onClick={split}>Split</button>
         <input
           type="range"
           min="0"
