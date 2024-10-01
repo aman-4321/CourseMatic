@@ -1,7 +1,11 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import ReactPlayer from "react-player";
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile, toBlobURL } from "@ffmpeg/util";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
+import TimelineBar from "./TimelineBar";
+import update from 'immutability-helper'
 
 const Editor = () => {
   const [videoSrc, setVideoSrc]: any = useState<string | null>(null);
@@ -61,27 +65,27 @@ const Editor = () => {
 
   // loads duration of all the video from the videoSrc array
   const loadDuration = async (video: any) => {
-    if (video) {
-      const dummydur: any = []
-      await Promise.all(video.map(async (x: any, index: number) => {
-        const a = new Promise(async (resolve, reject) => {
-          const video = document.createElement('video');
-          video.preload = 'metadata';
-
-          // Create a Blob URL directly from the Blob and set it as the video source
-          video.src = x;
-
-          video.onloadedmetadata = () => {
-            resolve(video.duration); // Duration in seconds
-          };
-        })
-        a.then((duration: any) => {
-          if (dummydur.length == 0 || !dummydur.includes(duration)) {
-            dummydur[index] = duration
-            setDurMap([...dummydur])
-          }
-        })
-      }))
+    try {
+      if (video) {
+        console.log("object")
+        const dummydur: any[] = await Promise.all(
+          video.map(async (x: any, index: number) => {
+            return new Promise<number>((resolve, reject) => {
+              const videoElement = document.createElement('video');
+              videoElement.preload = 'metadata';
+              videoElement.src = x;
+  
+              videoElement.onloadedmetadata = () => {
+                resolve(videoElement.duration); // Duration in seconds
+              };
+            });
+          })
+        );
+        // Update the state once all durations have been resolved
+        setDurMap(dummydur);
+      }
+    } catch (error) {
+      console.log(error, "error")
     }
   }
 
@@ -136,32 +140,31 @@ const Editor = () => {
     playerRef.current?.seekTo(time + 1)
     setPlaying(false);
   }
-  
+
   // split the video into two
-  const split = async() => {
-    if (!ffmpegRef.current.loaded) {
-      await load()
+    const split = async () => {
+      if (!ffmpegRef.current.loaded) {
+        await load()
+      }
+      if (playerRef.current && ffmpegRef.current.loaded && durMap) {
+        await ffmpegRef.current.writeFile('splitIn.mp4', await fetchFile(videoSrc[count]))
+        await ffmpegRef.current.exec(['-i', `splitIn.mp4`, `-ss`, '00:00:00', '-to', `${formatTime(playerRef.current.getCurrentTime())}`, `-c`, `copy`, `splitOut1.mp4`])
+        await ffmpegRef.current.exec(['-i', `splitIn.mp4`, `-ss`, `${formatTime(playerRef.current.getCurrentTime())}`, '-to', `${formatTime(durMap[count] + 1)}`, `-c`, `copy`, `splitOut2.mp4`])
+        const output1: any = await ffmpegRef.current.readFile('splitOut1.mp4')
+        const output2: any = await ffmpegRef.current.readFile('splitOut2.mp4')
+        const blobOut1 = new Blob([output1.buffer], { type: 'video/mp4' })
+        const blobOut2 = new Blob([output2.buffer], { type: 'video/mp4' })
+        const outputUrl1 = URL.createObjectURL(blobOut1)
+        const outputUrl2 = URL.createObjectURL(blobOut2)
+        const videos = [...videoSrc]
+        videos.splice(count, 1, outputUrl1, outputUrl2)
+        setVideoSrc(videos)
+        loadDuration(videos)
+        ffmpegRef.current.deleteFile('splitIn.mp4')
+        ffmpegRef.current.deleteFile('splitOut1.mp4')
+        ffmpegRef.current.deleteFile('splitOut2.mp4')
+      }
     }
-    if (playerRef.current && ffmpegRef.current.loaded && durMap) {
-      await ffmpegRef.current.writeFile('splitIn.mp4', await fetchFile(videoSrc[count]))
-      await ffmpegRef.current.exec(['-i', `splitIn.mp4`, `-ss`, '00:00:00', '-to', `${formatTime(playerRef.current.getCurrentTime())}`, `-c`, `copy`, `splitOut1.mp4`])
-      await ffmpegRef.current.exec(['-i', `splitIn.mp4`, `-ss`, `${formatTime(playerRef.current.getCurrentTime())}`, '-to', `${formatTime(durMap[count]+1)}`, `-c`, `copy`, `splitOut2.mp4`])
-      const output1: any = await ffmpegRef.current.readFile('splitOut1.mp4')
-      const output2: any = await ffmpegRef.current.readFile('splitOut2.mp4')
-      const blobOut1 = new Blob([output1.buffer], {type: 'video/mp4'})
-      const blobOut2 = new Blob([output2.buffer], {type: 'video/mp4'})
-      const outputUrl1 = URL.createObjectURL(blobOut1)
-      const outputUrl2 = URL.createObjectURL(blobOut2)
-      const videos = [...videoSrc]
-      delete videos[count]
-      videos.splice(count, 0, outputUrl1, outputUrl2)
-      setVideoSrc(videos)
-      loadDuration(videos)
-      ffmpegRef.current.deleteFile('splitIn.mp4')
-      ffmpegRef.current.deleteFile('splitOut1.mp4')
-      ffmpegRef.current.deleteFile('splitOut2.mp4')
-    }
-  }
 
   // trim the video
   const trim = async () => {
@@ -182,6 +185,33 @@ const Editor = () => {
       ffmpegRef.current.deleteFile('trimOut.mp4')
     }
   }
+
+  const deleteVid = () => {
+    const videos = [...videoSrc]
+    videos.splice(count, 1)
+    setVideoSrc(videos)
+    loadDuration(videos)
+    if (videos.length >= 1 && count > 0) {
+      setCount(prev => prev - 1)
+    }
+    if (videos.length > 1 && count == 0) {
+      setCount(prev => prev + 1)
+    }
+    if (videos.length == 0) {
+      setCount(0)
+    }
+  }
+
+  const moveCard = useCallback((dragIndex: number, hoverIndex: number) => {
+    setVideoSrc((prevCards: any) =>
+      update(prevCards, {
+        $splice: [
+          [dragIndex, 1],
+          [hoverIndex, 0, prevCards[dragIndex]],
+        ],
+      }),
+    )
+  }, [])
 
   return (
     <div className="h-screen flex flex-col">
@@ -226,16 +256,9 @@ const Editor = () => {
         {/* the timeline bars */}
         {durMap && durMap.map((duration: number, vidIndex: number) => {
           return (
-            <div className="flex items-center px-2 bg-slate-300 rounded-sm py-1 mr-1">
-              {Array.from({ length: duration }).map((_, index) => {
-                const barHeight = (index % 5 == 0 ? 10 : 7)
-                return (
-                  <div className="pr-[5px] cursor-pointer" onClick={() => { seek(index, vidIndex) }}>
-                    <button value={index} className='bg-black w-[1px] rounded-md' style={{ height: barHeight * 4 }} />
-                  </div>
-                )
-              })}
-            </div>
+            <DndProvider backend={HTML5Backend}>
+              <TimelineBar key={vidIndex} index={vidIndex} vidIndex = {vidIndex} seek = {seek} id={vidIndex} moveCard={moveCard} duration={duration} />
+            </DndProvider>
           )
         })}
       </div>
@@ -253,6 +276,7 @@ const Editor = () => {
         <button onClick={handleFullscreen}>Fullscreen</button>
         <button onClick={trim}>Trim</button>
         <button onClick={split}>Split</button>
+        <button onClick={deleteVid}>Delete</button>
         <input
           type="range"
           min="0"
