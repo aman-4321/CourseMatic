@@ -5,7 +5,7 @@ import "./index.css";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Dashboard from "./components/Dashboard.tsx";
 import Project from "./components/Project.tsx";
-import Editor from "./components/Editor.tsx";
+import VideoToAudioConverter from "./components/VideoToAudio.tsx";
 
 const router = createBrowserRouter([
   {
@@ -20,10 +20,14 @@ const router = createBrowserRouter([
     path: "/projectID",
     element: <Project />,
   },
+  {
+    path: "/audio",
+    element: <VideoToAudioConverter />,
+  },
 ]);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <RouterProvider router={router} />
-  </StrictMode>
+  </StrictMode>,
 );
