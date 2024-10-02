@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "build": "npm i -g pnpm && pnpm install",
     "start": "tsc -b && node dist/index.js"
   },
   "keywords": [],
@@ -16,7 +15,7 @@
     "@types/fluent-ffmpeg": "^2.1.26",
     "@types/multer": "^1.4.12",
     "assemblyai": "^4.7.0",
-    "cloudinary": "^2.5.0",
+    "cloudinary": "^1.21.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
