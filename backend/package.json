@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "build": "npm i -g pnpm && pnpm install",
     "start": "tsc -b && node dist/index.js"
   },
   "keywords": [],
