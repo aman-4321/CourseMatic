@@ -20,6 +20,9 @@ importers:
       '@types/multer':
         specifier: ^1.4.12
         version: 1.4.12
+      assemblyai:
+        specifier: ^4.7.0
+        version: 4.7.0
       cloudinary:
         specifier: ^2.5.0
         version: 2.5.0
@@ -95,6 +98,10 @@ packages:
 
   array-flatten@1.1.1:
     resolution: {integrity: sha512-PCVAQswWemu6UdxsDFFX/+gVeYqKAod3D3UVm91jHwynguOwAvYPhx8nNlM++NqRcK6CxxpUafjmhIdKiHibqg==}
+
+  assemblyai@4.7.0:
+    resolution: {integrity: sha512-m0GGgb9StJMYJns9bUrMtz+WlrcM8jNiYnhlSalz5tGgu9XUThxjOs6bWXxPNsD/0BjXp4VijMEvwmue3Q85mQ==}
+    engines: {node: '>=18'}
 
   async@0.2.10:
     resolution: {integrity: sha512-eAkdoKxU6/LkKDBzLpT+t6Ff5EtfSF4wx1WfJiPEEV7WNLnDaRXk0oVysiEPm262roaachGexwUv94WhSgN5TQ==}
@@ -438,6 +445,18 @@ packages:
     resolution: {integrity: sha512-HxJdYWq1MTIQbJ3nw0cqssHoTNU267KlrDuGZ1WYlxDStUtKUhOaJmh112/TZmHxxUfuJqPXSOm7tDyas0OSIQ==}
     hasBin: true
 
+  ws@8.18.0:
+    resolution: {integrity: sha512-8VbfWfHLbbwu3+N6OKsOMpBdT4kXPDDB9cJk2bJ6mh9ucxdlnNvH1e+roYkKmN9Nxw2yjz7VzeO9oOz2zJ04Pw==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
   xtend@4.0.2:
     resolution: {integrity: sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ==}
     engines: {node: '>=0.4'}
@@ -510,6 +529,13 @@ snapshots:
   append-field@1.0.0: {}
 
   array-flatten@1.1.1: {}
+
+  assemblyai@4.7.0:
+    dependencies:
+      ws: 8.18.0
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
 
   async@0.2.10: {}
 
@@ -877,5 +903,7 @@ snapshots:
   which@1.3.1:
     dependencies:
       isexe: 2.0.0
+
+  ws@8.18.0: {}
 
   xtend@4.0.2: {}
